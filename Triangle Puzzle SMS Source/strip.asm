@@ -473,7 +473,10 @@ CheckWinCondition:
 ;Not a winning triangle for T6/Done
 +:
 ;Update Moves Graphic
-    call UpdateMovesGraphic
+    push bc
+        call UpdateMovesGraphic
+        call UpdateScoreGraphic
+    pop bc
     
 ;Check if we have our Win Condition
     ld hl, numWinningTriangles
@@ -487,9 +490,44 @@ CheckWinCondition:
     ret
 
 Winner:
-    call ClearVRAM
+/*
+    ld hl, $3A48 | VRAMWrite
+    call SetVDPAddress
+    ld hl, YouWinMap
+    ld bc, YouWinMapEnd-YouWinMap
+    call CopyToVDP
+*/
+;Wait for VBlank so we can Update sprites
+    halt
+    call UpdateSAT
+
+    ld de, $0000                                ;Our offset for moving down a row
+    ld b, $06                                   ;Number of rows to draw
+    ld hl, YouWinMap                            ;Location of tile map data
+
+-:                                              ;LOOP start
+    push bc                                     ;Save Counter
+        push hl                                 ;Save map address
+            ld hl, (WinVRAM)
+            add hl, de
+            call SetVDPAddress                  ;Draw to correct spot in VRAM
+;DE + $40 for the next row to be drawn
+            ld hl, $0040                
+            add hl, de
+            ld d, h
+            ld e, l
+        pop hl                                  ;ld hl, InactiveSwapColorsMap
+        ld bc, 26                               ;Number of tiles to draw x2
+        call CopyToVDP
+    pop bc
+    djnz -                                      ;LOOP end
+
+-:
+
+    jr -
 
     ret
+
 
 ;Parameters: DE = strips.current.finalColor, HL = strips.current.color
 ;Returns A = PASS ($FF) or FAIL ($00)

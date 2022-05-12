@@ -471,7 +471,7 @@ BGTileCollision:
 ;An alteration on the division algorithm used by Sean Mclaughlin in
 ;   Learn TI-83 Plus Assembly In 28 Days
 ;Divides one 8 bit number by another 8 bit number
-;Parameters: H = Dividend, D = Divisor
+;Parameters: H = Dividend, D = Divisor D/H  
 ;Returns: L = Quotient, A = Remainder
 ;Affects: A, B, D, HL
 Div8Bit:

@@ -111,7 +111,7 @@
     score       db
     moves       db
     triPoints   db              ;Points to add on to the score for complete triangles
-
+    totalScore  db              ;triPoints + score
 ;SCORE
 ;Hundreds digit
     sprNum1     db

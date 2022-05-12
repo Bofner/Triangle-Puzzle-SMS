@@ -88,7 +88,15 @@ TrianglePuzzle:
 ;Set button inactive
     call SetActiveSwapColors
     call SetInactiveSwapColors
-    
+
+
+;Load You Win Tiles
+    ld hl, $1200 | VRAMWrite
+    call SetVDPAddress
+    ld hl, YouWinTiles
+    ld bc, YouWinTilesEnd-YouWinTiles
+    call CopyToVDP
+ 
 
 ;==============================================================
 ; Write background map
@@ -234,7 +242,7 @@ TrianglePuzzle:
 ;==============================================================
 ; Set HBlank for every 24th Scanline
 ;==============================================================
-    ld a, $FF                               ;24 = $18, but it's OFF now
+    ld a, $FF                               ;24 = $18, but it's OFF now, $0C = 12
     ld c, $8A
     call UpdateVDPRegister
 
@@ -261,8 +269,15 @@ TrianglePuzzle:
 ;Draw strips to screen, we don't have to do this all every single frame
     call DrawStrips
 
+;Initial draw for the move graphics
+    call DrawMovesGraphic
+
+;Initial for score graphics
+    call DrawScoreGraphic
+
 ;Must manually call due to not wanting to update all strips every frame
     call EndSprites
+
 
 ;========================================================
 ; Game Logic
@@ -347,6 +362,39 @@ ActiveSwapColorsTiles:
     .include "assets\\tiles\\backgrounds\\activeSwapColors_tiles.inc"
 ActiveSwapColorsTilesEnd:
 
+YouWinTiles:
+    .include "assets\\tiles\\backgrounds\\youWin_tiles.inc"
+YouWinTilesEnd:
+
+;========================================================
+; Tile Maps
+;========================================================
+TrianglePuzzleMap:
+    .include "assets\\maps\\trianglePuzzle_map.inc"
+TrianglePuzzleMapEnd:
+
+
+YouWinMap:
+    .include "assets\\maps\\youWin_map.inc"
+YouWinMapEnd:
+WinVRAM:
+    .dw $3A06 | VRAMWrite
+
+
+InactiveSwapColorsMap:
+    .include "assets\\maps\\inactiveSwapColors_map.inc"
+
+ActiveSwapColorsMap:
+    .include "assets\\maps\\activeSwapColors_map.inc"
+SwapColorsVRAM:
+    .dw $3966 | VRAMWrite
+
+
+TrianglePuzzleMapCompressed:
+    .incbin "assets\\maps\\trianglePuzzle_map.pscompr"
+
+
+
 
 ;========================================================
 ; Sprite Palette
@@ -400,23 +448,5 @@ MenuBL:
 MenuBR:
     .incbin "assets\\tiles\\sprites\\menuSelector\\BR.pscompr"
 
-;========================================================
-; Tile Maps
-;========================================================
-TrianglePuzzleMap:
-    .include "assets\\maps\\trianglePuzzle_map.inc"
-TrianglePuzzleMapEnd:
 
-
-InactiveSwapColorsMap:
-    .include "assets\\maps\\inactiveSwapColors_map.inc"
-
-ActiveSwapColorsMap:
-    .include "assets\\maps\\activeSwapColors_map.inc"
-SwapColorsVRAM:
-    .dw $3966 | VRAMWrite
-
-
-TrianglePuzzleMapCompressed:
-    .incbin "assets\\maps\\trianglePuzzle_map.pscompr"
     

@@ -57,6 +57,9 @@ PressMenuButton:
 
 
 UnselectAllNodes:
+;Don't want to select on re-entry
+    ld hl, player.moveBuffer
+    ld (hl), $10
 ;Nodes don't change much, so we can just re-initialize them and change their color
     call InitNodes
 ;Unselect our nodes
@@ -101,9 +104,6 @@ ResetPuzzle:
     call InitStrips
 ;Reinitialize Selector
     call InitSelector
-;Set up out Movement buffer so we don't get double inputs after we reinitialize the buffer
-    ld hl, player.moveBuffer
-    ld (hl), $10
 ;Reinitialize Menu
     call InitMenu
 ;Reinitialize StatusBar
@@ -112,7 +112,24 @@ ResetPuzzle:
     call UpdateSelectedStripAll
 ;Redraw our strips
     call DrawStrips
+;Update Moves Graphics
+    call DrawMovesGraphic
+;Update Score Graphics
+    call DrawScoreGraphic
 
+;Redraw Map screen
+    ld hl, $3800 | VRAMWrite
+    call SetVDPAddress
+    ld hl, TrianglePuzzleMap
+    ld bc, TrianglePuzzleMapEnd-TrianglePuzzleMap
+    call CopyToVDP
+
+;We cannot Swap
+    call SetInactiveSwapColorsMap
+
+;Don't want to select on re-entry
+    ld hl, player.moveBuffer
+    ld (hl), $10
 
     ret
 

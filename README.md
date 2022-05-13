@@ -18,7 +18,7 @@ When three nodes of a triangle are selected, the edges rotate counter clockwise:
 
 All nodes may be unselected at once:
 
-!{}(https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/unselect%20all.gif)
+![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/unselect%20all.gif)
 
 The puzzle can be reset to the starting state:
 

@@ -12,16 +12,32 @@ When three nodes are selected that encapsulate 2 edges, those edges colors can b
 
 ![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/swap.gif)
 
+When three nodes of a triangle are selected, the edges rotate counter clockwise:
 
+![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/rotate.gif)
 
+All nodes may be unselected at once:
 
+!{}(https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/unselect%20all.gif)
 
-#### Update 5/12/2022
+The puzzle can be reset to the starting state:
+
+![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/reset.gif)
+
+And the puzzle can be solved!
+
+![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/youWin.gif)
+
+There's still some more things to be fixed cosmetically, but functionally, the game works just as it was assigned in class, but for the Sega Master System!
+
+## Updates:
+
+#### Update: 5/12/2022
 
 Score now works! Sprites are 8x8... for now. Working on an HBlank swap between 8x16 and 8x8 for tall score numbers. It works, but gives some glitches, so it's been left out
 
 
-#### Launch Status 5/11/2022
+#### Launch: 5/11/2022
 
-All features are present, at least in the back end. Still need to work out getting the score to display on screen, nd other cosmetic fun stuff
+All features are present, at least in the back end. Still need to work out getting the score to display on screen, and other cosmetic fun stuff
 

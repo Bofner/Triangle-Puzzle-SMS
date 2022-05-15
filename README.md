@@ -34,6 +34,11 @@ There's still some more things to be fixed cosmetically, but functionally, the g
 
 #### Update: 5/12/2022
 
+Score font now matches the rest of the font in game! Couldn't end up using HBlank for bad choices during programming, but the end result is the same as it would have been.
+
+
+#### Update: 5/12/2022
+
 Score now works! Sprites are 8x8... for now. Working on an HBlank swap between 8x16 and 8x8 for tall score numbers. It works, but gives some glitches, so it's been left out
 
 

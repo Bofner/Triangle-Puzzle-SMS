@@ -189,6 +189,11 @@ TrianglePuzzle:
     ld bc, FontTilesEnd-FontTiles
     call CopyToVDP
 
+;Tall Numbers
+    ld hl, TallNumbers
+    ld de, $3000 | VRAMWrite
+    call Decompress
+
 
 ;==============================================================
 ; Intialize our Variables
@@ -447,6 +452,11 @@ MenuBL:
     .incbin "assets\\tiles\\sprites\\menuSelector\\BL.pscompr"
 MenuBR:
     .incbin "assets\\tiles\\sprites\\menuSelector\\BR.pscompr"
+
+;-----------------------
+
+TallNumbers:
+    .incbin "assets\\tiles\\sprites\\tallNumbers\\tallNumbers.pscompr"
 
 
     

@@ -108,8 +108,8 @@ banks 1
 ;-------------------
 ; Status Bar
 ;-------------------
-.define zeroAdr $2800
-.define zeroSpr $40
+.define zeroAdr $3040
+.define zeroSpr $82
 
 ;==============================================================
 ; Variables 

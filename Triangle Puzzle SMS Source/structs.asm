@@ -150,6 +150,45 @@
     x5          db 
     cc5         db
     sprSize5    db
+;------------------------------
+;Hundreds digit BOTTOM
+    sprNum6     db
+    hw6         db
+    y6          db
+    x6          db 
+    cc6         db
+    sprSize6    db
+
+;Tens digit BOTTOM
+    sprNum7     db
+    hw7         db
+    y7          db
+    x7          db 
+    cc7         db
+    sprSize7    db
+;Ones digit BOTTOM
+    sprNum8     db
+    hw8         db
+    y8          db
+    x8          db 
+    cc8         db
+    sprSize8    db
+
+;MOVES
+;Tens digit BOTTOM
+    sprNum9     db
+    hw9         db
+    y9          db
+    x9          db 
+    cc9         db
+    sprSize9    db
+;Ones Digit BOTTOM
+    sprNumA     db
+    hwA         db
+    yA          db
+    xA          db 
+    ccA         db
+    sprSizeA    db
 
 .endst
 

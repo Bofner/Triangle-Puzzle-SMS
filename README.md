@@ -32,6 +32,12 @@ There's still some more things to be fixed cosmetically, but functionally, the g
 
 ## Updates:
 
+#### Update: 5/19/2022
+
+Added a Dev studio splash screen. Added a title screen. Added a way to restart the game after winning. Made it so that the Pause button shows the solution you are working
+towards. Added a secret way to change the palette of the puzzle. 
+
+
 #### Update: 5/12/2022
 
 Score font now matches the rest of the font in game! Couldn't end up using HBlank for bad choices during programming, but the end result is the same as it would have been.

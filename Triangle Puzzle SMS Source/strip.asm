@@ -490,13 +490,9 @@ CheckWinCondition:
     ret
 
 Winner:
-/*
-    ld hl, $3A48 | VRAMWrite
-    call SetVDPAddress
-    ld hl, YouWinMap
-    ld bc, YouWinMapEnd-YouWinMap
-    call CopyToVDP
-*/
+;Change scene so we don't mess with the pause screen
+    ld hl, sceneID                              ;ld hl, sceneID
+    ld (hl), $03
 ;Wait for VBlank so we can Update sprites
     halt
     call UpdateSAT
@@ -522,11 +518,84 @@ Winner:
     pop bc
     djnz -                                      ;LOOP end
 
+;Don't want to select on re-entry
+    ld hl, player.moveBuffer
+    ld (hl), $10
 -:
+    halt
+    ld hl, player.moveBuffer
+    ld (hl), a
+    cp $00
+    jr z, +
+    dec (hl)
+    jr -
+
+;Wait for player to reset the puzzle
++:
+    halt
+;Read INPUT from joypad 1
+    in a, $DC                       ;Gives us 1's for no input
+    cpl                             ;So let's invert that
+;Check Button 1
+    bit 4, a                        ;If bit is zero, Z flag set
+    jr nz, ++
 
     jr -
 
+++:
+
+    call RestartPuzzle
+
+    jp TrianglePuzzleMainLoop
+
+;Very similar to reset, but for restarting the game after a win
+RestartPuzzle:
+;Go back to puzzle scene
+    ld hl, sceneID                             ;ld hl, sceneID
+    ld (hl), $02
+
+;Reinitialize Nodes
+    call UnselectAllNodes
+;Reinitialize Strips
+    call InitStrips
+;Reinitialize Selector
+    call InitSelector
+;Reinitialize Menu
+    call InitMenu
+;Reinitialize StatusBar
+    call InitStatusBar
+;SelectedStripNums
+    call UpdateSelectedStripAll
+;Draw the Player Selector on screen
+    call CheckMenuOrTri                     ;DE will be appropriate sprite
+    ;ld de, player/menu.sprNum
+    call MultiUpdateSATBuff  
+;Redraw our strips
+    call DrawStrips
+;Update Moves Graphics
+    call DrawMovesGraphic
+;Update Score Graphics
+    call DrawScoreGraphic
+
+;Redraw Map screen
+    ld hl, $3800 | VRAMWrite
+    call SetVDPAddress
+    ld hl, TrianglePuzzleMap
+    ld bc, TrianglePuzzleMapEnd-TrianglePuzzleMap
+    call CopyToVDP
+
+;We cannot Swap
+    call SetInactiveSwapColorsMap
+
+;Don't want to select on re-entry
+    ld hl, player.moveBuffer
+    ld (hl), $10
+
+    halt
+    call UpdateSAT
+
     ret
+
 
 
 ;Parameters: DE = strips.current.finalColor, HL = strips.current.color

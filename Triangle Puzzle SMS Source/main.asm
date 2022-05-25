@@ -16,17 +16,19 @@ banks 1
 ;==============================================================
 ; SMS defines
 ;==============================================================
-.define VDPCommand  $bf 
-.define VDPData     $be
+.define VDPCommand  $BF 
+.define VDPData     $BE
 .define VRAMWrite   $4000
-.define CRAMWrite   $c000
+.define CRAMWrite   $C000
 .define NameTable   $3800
-.define TextBox     $3ccc
+.define TextBox     $3CCC
+
+.define paletteSize $10
 
 .define UpBounds    $02
-.define DownBounds  $bd
+.define DownBounds  $BD
 .define LeftBounds  $05
-.define RightBounds $fd
+.define RightBounds $FD
 
 ;==============================================================
 ; Game Constants
@@ -108,11 +110,11 @@ banks 1
 ;-------------------
 ; Status Bar
 ;-------------------
-.define zeroAdr $2800
-.define zeroSpr $40
+.define zeroAdr $3040
+.define zeroSpr $82
 
 ;==============================================================
-; Variables 
+; Boiler Variables 
 ;==============================================================
 .enum $c000 export
     SATBuff         dsb 256     ;Set aside 256 bytes for SAT buffer $100
@@ -130,26 +132,31 @@ banks 1
     frameCount      db          ;Used to count frames in intervals of 60
 
     sceneComplete   db          ;Used to determine if a scene is finished or not
+    sceneID         db          ;Used to determine the scene we are on ($00 = SFS, $01 = Title, $FF = Pause, etc.)         
 
-    sprYOff         db          ;Offset for the Y position of sprites when drawing them to the screen (Updates by $10)
-    sprXOff         db          ;Offset for the X position of sprites when drawing them to the screen (Updates by $08)
-    sprCCOff        db          ;Offset for the CC of sprites when drawing them to the screen         (Updates by $02)
+
+    sprYOff         db          ;Offset for the Y position of sprites when drawing them to the screen 
+                                ;(Updates by $10 for 8x16, $08 for 8x8)
+    sprXOff         db          ;Offset for the X position of sprites when drawing them to the screen
+                                ;(Updates by $08 for 8x16, $08 for 8x8) 
+    sprCCOff        db          ;Offset for the CC of sprites when drawing them to the screen
+                                ;(Updates by $02 for 8x16, $01 for 8x8)  
 
     ;$c000 to $dfff is the space I have to work with for variables and such
     endByte         db          ;The first piece of available data post boiler-plate data
     
 .ende
 
-
-
 ;=============================================================================
 ; Special numbers 
 ;=============================================================================
+
 .define postBoiler  endByte     ;Location in memory that is past the boiler plate stuff
 
 ;==============================================================
 ; SDSC tag and ROM header
 ;==============================================================
+
 .sdsctag 0.1, "Triangle Puzzle", "CS 509 Java Project to SMS","Bofner"
 
 .bank 0 slot 0
@@ -157,6 +164,7 @@ banks 1
 ;==============================================================
 ; Boot Section
 ;==============================================================
+
     di              ;Disable interrupts
     im 1            ;Interrupt mode 1
     jp init         ;Jump to the initialization program
@@ -165,16 +173,16 @@ banks 1
 ; Interrupt Handler
 ;==============================================================
 .orga $0038
-    push af
-    push hl
+    ex af, af'
+    exx 
         in a,(VDPCommand)
         ld (VDPStatus), a
         ld hl, INTNumber
         ld a, (hl)
         inc a
         ld (hl), a
-    pop hl
-    pop af
+    exx
+    ex af, af'
     ei
     reti
 
@@ -182,7 +190,46 @@ banks 1
 ; Pause button handler
 ;==============================================================
 .org $0066
-    
+;If we are at puzzle, show solution, else if we are already there, show puzzle, else do nothing
+    ld a, (sceneID)
+    cp $02
+    jr z, SetSolutionScreen
+    cp $FF
+    jp z, BackToPuzzle
+
+    retn
+SetSolutionScreen:
+;Set scene ID
+    ld hl, sceneID
+    ld (hl), $FF
+
+    retn
+
+
+BackToPuzzle:
+;Set scene ID
+    ld hl, sceneID
+    ld (hl), $02
+
+;Put player selector back at top
+    call InitSelector
+
+;Draw the selector first since it has to be the top-most sprite
+    ld de, player.sprNum
+    call MultiUpdateSATBuff
+
+;Draw strips to screen, we don't have to do this all every single frame
+    call DrawStrips
+
+;Initial draw for the move graphics
+    call DrawMovesGraphic
+
+;Initial for score graphics
+    call DrawScoreGraphic
+
+;Must manually call due to not wanting to update all strips every frame
+    call EndSprites
+
     retn
 
 
@@ -195,7 +242,7 @@ init:
 ;==============================================================
 ; Set up VDP Registers
 ;==============================================================
-
+;This is VDP Intialization data
     ld hl,VDPInitData                       ; point to register init data.
     ld b,VDPInitDataEnd - VDPInitData       ; 11 bytes of register data.
     ld c, $80                               ; VDP register command byte.
@@ -245,6 +292,8 @@ init:
 ; Game sequence
 ;==============================================================
 
+    call SteelFingerStudios
+
     call TitleScreen
 
     jp TrianglePuzzle
@@ -275,12 +324,14 @@ init:
 ;========================================================
 .include "psDecompression.asm"
 .include "helperFunctions.asm"
-.include "drawStrips.asm"
 .include "interruptSubroutines.asm"
+.include "drawStrips.asm"
+.include "pauseScreenHandle.asm"
 
 ;========================================================
 ; Include Level Files
 ;========================================================
+.include "steelFingerStudios.asm"
 .include "titleScreen.asm"
 .include "trianglePuzzle.asm"
 
@@ -310,28 +361,30 @@ VDPInitData:
 
               .db $00                   ; reg. 9 Vertical Scroll
 
-              .db $ff                   ; reg. 10 Raster line interrupt every 24 scanlines
+              .db $ff                   ; reg. 10 Raster line interrupt off
 
 VDPInitDataEnd:
+
 
 ;========================================================
 ; Text Configuration
 ;========================================================
-    .asciitable
-        map " " = $d5
-        map "0" to "9" = $d6
-        map "!" = $e0
-        map "," = $e1
-        map "." = $e2
-        map "'" = $e3
-        map "?" = $e4
-        map "A" to "Z" = $e5
-    .enda
+.asciitable
+    map " " = $d5
+    map "0" to "9" = $d6
+    map "!" = $e0
+    map "," = $e1
+    map "." = $e2
+    map "'" = $e3
+    map "?" = $e4
+    map "A" to "Z" = $e5
+.enda
 
 TestMessage:
     ;50Ch"0123456789ABCDEF789012345 123456789ABCDEF789012345"
     .asc "Intiate work on Triangle  Puzzle!"
     .db $ff     ;Terminator byte
+
 
 TestPalette:
     .db $00 $15 $2A $3F $00 $15 $2A $3F $3F $2A $15 $00 $3F $2A $15 $00
@@ -341,10 +394,16 @@ TestPaletteEnd:
 ;========================================================
 ; Extra Data
 ;========================================================
+;All SATBuff locations for each sprite
     .include "spriteDefines.asm"
 
+
+FadedPalette:
+    .db $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 
+FadedPaletteEnd:
+
+
 FontTiles:
-    ;Font Tile Data
     .include "assets\\tiles\\backgrounds\\font_tiles.inc" 
 FontTilesEnd:
 

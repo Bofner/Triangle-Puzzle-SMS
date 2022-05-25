@@ -1,6 +1,6 @@
-;===================================================
+;================================================================================
 ;General VDP Functions
-;===================================================
+;================================================================================
 
 ;Tells VDP where it should be writing/reading data from in VRAM
 ;Parameters: HL = address
@@ -13,6 +13,7 @@ SetVDPAddress:
         out (VDPCommand), a
     pop af
     ret
+
 
 ;================================================================================
 
@@ -29,6 +30,7 @@ CopyToVDP:
     or c
     jr nz, -
     ret
+
 
 ;================================================================================
 
@@ -50,34 +52,16 @@ SetVDPRegisters:
 
 ;Updates a single VDP Register 
 ;Parameters: A = register data (one byte) C = Which VDP regiseter $8(register#)
-;Affects: A, C,B
+;Affects: A, C, B
 UpdateVDPRegister:
-
     out (VDPCommand), a                 ;Load data into CDP
     ld a, c
     out (VDPCommand), a                 ;Tell it which register to put it to
     ret
 
+
 ;================================================================================
-
-
-;Disables the display
-;Parameters: 
-;Affects: A, B, C, HL
-BlankScreen:
-        ;Turn on screen (Maxim's explanation is too good not to use)
-    ld a, %00100000
-;           ||||||`- Zoomed sprites -> 16x16 pixels
-;           |||||`-- Not doubled sprites -> 1 tile per sprite, 8x8
-;           ||||`--- Mega Drive mode 5 enable
-;           |||`---- 30 row/240 line mode
-;           ||`----- 28 row/224 line mode
-;           |`------ VBlank interrupts
-;            `------- Enable display    
-    ld c, $81
-    call UpdateVDPRegister
-    ret
-
+;Visual Effects
 ;================================================================================
 
 ;Clears VRAM
@@ -97,11 +81,342 @@ ClearVRAM:
     jr nz,-             ;If not, loop back up
     ret 
 
+
 ;================================================================================
 
-;===================================================
+;Clears the SATBuff
+;Parameters: 
+;Affects: A, B, HL
+ClearSATBuff:
+    ld hl, SATBuff
+    ld b, $FF
+    xor a
+-:
+    ld (hl), a
+    inc hl
+    djnz -
+
+    ret
+
+
+;================================================================================
+
+;Disables the display
+;Parameters: 
+;Affects: A, B, C, HL
+BlankScreen:
+        ;Turn on screen (Maxim's explanation is too good not to use)
+    ld a, %00100000
+;           ||||||`- Zoomed sprites -> 16x16 pixels
+;           |||||`-- Not doubled sprites -> 1 tile per sprite, 8x8
+;           ||||`--- Mega Drive mode 5 enable
+;           |||`---- 30 row/240 line mode
+;           ||`----- 28 row/224 line mode
+;           |`------ VBlank interrupts
+;            `------- Enable display    
+    ld c, $81
+    call UpdateVDPRegister
+    ret
+
+
+;================================================================================
+
+;Updates the BG Palette from the buffer
+;Parameters: 
+;Affects: A, HL, BC
+LoadBackgroundPalette:
+;Load Background Palette in VRAM
+    ld hl, $c000 | CRAMWrite
+    call SetVDPAddress
+    ld hl, currentBGPal.color0
+    ld bc, $10
+    call CopyToVDP
+
+    ret
+
+
+;================================================================================
+
+;Updates the SPR Palette from the buffer
+;Parameters: 
+;Affects: A, BC, HL
+LoadSpritePalette:
+;Load Sprite Palette in VRAM
+    ld hl, $c010 | CRAMWrite
+    call SetVDPAddress
+    ld hl, currentSPRPal.color0
+    ld bc, $10
+    call CopyToVDP
+
+    ret
+
+
+;================================================================================
+
+;Causes the screen to fade in from black
+;Parameters: Both palette buffers must be next to each other in memory BG then SPR
+;Affects: A, HL, BC, DE
+FadeIn:
+    ld a, $03
+BigInLoop:
+    push af
+    ld hl, currentBGPal.color0
+    ld ix, targetBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00110000                     ;BLUE Bitmask
+    ld d, %00010000                     ;Lighten BLUEs by 1
+    ld e, %00001111                     ;Reset BLUEs
+
+InnerInLoop:                                      ;LOOP
+;Lighten Background COLORs
+    ld a, (ix+0)                        ;ld a, (currentBGPal.colorCurrent)
+    and c                               ;COLOR Bitmask
+    ld iyl, a                           ;Save target COLOR value
+    ld a, (hl)
+    and c                               ;Compare with current value
+    cp iyl                              ;If TARGET, skip the addition
+    jr z, +
+    ld a, (hl)                          ;ld a, (currentBGPal.colorCurrent)
+    and c                               ;COLOR Bitmask
+
+    add a, d                            ;Lighten Amount
+    push af
+        ld a, e                         ;ld a, COLOR reset
+        and (hl)                        ;Reset COLOR 
+        ld (hl), a                      ;And store it in buffer
+    pop af
+    or (hl)                             ;Update COLOR with new, lightened version
+    ld (hl), a                          ;Lighten BG COLOR by 1 and save to buffer
+
++:
+    push de
+        ld de, paletteSize
+        add hl, de                      ;ld hl, currentSPRPal.colorCurrent
+        add ix, de                      ;ld ix, currentSPRPal.colorCurrent
+    pop de              
+
+;Lighten Sprite COLORs
+    ld a, (ix+0)                        ;ld a, (currentBGPal.colorCurrent)
+    and c                               ;COLOR Bitmask
+    ld iyl, a                           ;Save target COLOR value
+    ld a, (hl)
+    and c                               ;Compare with current value
+    cp iyl                              ;If TARGET, skip the addition
+    jr z, +
+
+    add a, d                            ;Lighten Amount
+    push af
+        ld a, e                         ;ld a, COLOR reset
+        and (hl)                        ;Reset COLOR 
+        ld (hl), a                      ;And store it in buffer
+    pop af
+    or (hl)                             ;Update COLOR with new, lightened version
+    ld (hl), a                          ;Lighten SPR COLOR by 1 and save to buffer
+
++:  
+    inc hl                              ;ld hl, currentSPRPal.colorNext
+    inc ix                              ;ld ix, targetSPRPal.colorNext
+    push de
+        ld de, -16                      ;Go back to BGPal
+        add hl, de                      ;ld hl, currentBGPal.colorNext
+        add ix, de                      ;ld ix, targetBGPal.colorNext
+    pop de
+    
+    djnz InnerInLoop                    ;Loop back for the next color in palette
+
+;Smoothe out the fading process
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK  
+
+;Timer so that we don't write to VRAM while drawing the border
+    ld a, $EF
+-:
+    dec a
+    cp $00
+    jr nz, -                  
+
+;Update the graphics during VBlank to avoid artifacts
+    push bc
+    push hl
+        call LoadBackgroundPalette
+        call LoadSpritePalette          ;Update palettes in VRAM
+    pop hl
+    pop bc
+
+;Set our new color Bitmasks
+    ld a, c                             ;ld a, COLOR Bitmask
+    cp %00110000                        ;Is it BLUE?
+    jr z, +
+    cp %00001100                        ;Is it GREEN?
+    jr z, ++
+    cp %00000011                        ;Is it RED?
+    jr z, +++   
+
+;Go from BLUE to GREEN 
++:                 
+    ld hl, currentBGPal.color0
+    ld ix, targetBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00001100                     ;GREEN Bitmask
+    ld d, %00000100                     ;Lighten GREENs by 1
+    ld e, %00110011                     ;Reset GREENs
+    jp InnerInLoop
+
+;Go from GREEN to RED 
+++:
+    ld hl, currentBGPal.color0
+    ld ix, targetBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00000011                     ;RED Bitmask
+    ld d, %00000001                     ;Lighten REDs by 1
+    ld e, %00111100                     ;Reset REDs
+    jp InnerInLoop
+
+;All done
++++:
+    pop af
+    dec a
+    cp $00
+    jp nz, BigInLoop                    ;Making our own djnz because it's too big
+
+    ret
+
+
+;================================================================================
+
+;Causes the screen to fade to black
+;Parameters: Both palette buffers must be next to each other in memory BG then SPR
+;Affects: A, HL, BC, DE
+FadeToBlack:
+    ld a, $03
+BigBlackLoop:
+    push af
+    ld hl, currentBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00000011                     ;RED Bitmask
+    ld d, %00000001                     ;Darken REDs by 1
+    ld e, %00111100                     ;Reset REDs
+
+InnerBlackLoop:                         ;LOOP
+;Darken Background COLORs
+    ld a, (hl)                          ;ld a, (currentBGPal.colorCurrent)
+    and c                               ;COLOR Bitmask
+    cp $00                              ;If zero, skip the subtraction
+    jr z, +
+    sub d                               ;Darken Amount
+    push af
+        ld a, e                         ;ld a, COLOR reset
+        and (hl)                        ;Reset COLOR 
+        ld (hl), a                      ;And store it in buffer
+    pop af
+    or (hl)                             ;Update COLOR with new, darkened version
+    ld (hl), a                          ;Darken BG COLOR by 1 and save to buffer
+
++:
+    push de
+        ld de, paletteSize
+        add hl, de                      ; ld hl, currentSPRPal.colorCurrent
+    pop de                             
+;Darken Sprite COLORs
+    ld a, (hl)
+    and c                              ;COLOR Bitmask
+    cp $00
+    jr z, +
+    sub d                               ;Darken Amount
+    push af
+        ld a, e                         ;ld a, COLOR reset
+        and (hl)                        ;Reset COLOR 
+        ld (hl), a                      ;And store it in buffer
+    pop af
+    or (hl)                             ;Update COLOR with new, darkened version
+    ld (hl), a                          ;Darken SPR COLOR by 1 and save to buffer
+
++:  
+    inc hl                              ;ld hl, currentSPRPal.colorNext
+    push de
+        ld de, -16
+        add hl, de                      ; ld hl, currentBGPal.colorNext
+    pop de
+
+    djnz InnerBlackLoop                 ;Loop back for the next color in palette
+
+;Smoothe out the fading process
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK
+    halt                                ;Wait for VBLANK
+
+;Timer so that we don't write to VRAM while drawing the border
+    ld a, $EF
+-:
+    dec a
+    cp $00
+    jr nz, -  
+
+;Update the graphics during VBlank to avoid artifacts
+    push bc
+    push hl
+        call LoadBackgroundPalette
+        call LoadSpritePalette          ;Update palettes in VRAM
+    pop hl
+    pop bc
+    
+;Set our new color Bitmasks
+    ld a, c                             ;ld a, COLOR Bitmask
+    cp %00000011                        ;Is it RED?
+    jr z, +
+    cp %00001100                        ;Is it Green?
+    jr z, ++
+    cp %00110000                        ;Is it Blue?
+    jr z, +++   
+
+;Go from RED to GREEN 
++:                 
+    ld hl, currentBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00001100                     ;GREEN Bitmask
+    ld d, %00000100                     ;Darken GREENs by 1
+    ld e, %00110011                     ;Reset GREENs
+    jp InnerBlackLoop
+
+;Go from GREEN to BLUE 
+++:
+    ld hl, currentBGPal.color0
+    ld b, $10                           ;Full length of the palette
+    ld c, %00110000                     ;BLUE Bitmask
+    ld d, %00010000                     ;Darken BLUEs by 1
+    ld e, %00001111                     ;Reset BLUEs
+    jp InnerBlackLoop
+
+;All done
++++:
+    pop af
+    dec a
+    cp $00
+    jp nz, BigBlackLoop                 ;Making our own djnz because it's too big
+
+    ret
+
+
+;================================================================================
+
+;Writes a palette to the buffer
+;Parameters: HL = currentPalette.color0, DE = Palette address, B = size of palette
+;Affects: A, HL, DE, B
+PalBufferWrite:  
+    ld a, (de)
+    ld (hl), a
+    inc hl
+    inc de
+    djnz PalBufferWrite
+
+    ret
+
+;================================================================================
 ;Reality Checkers
-;===================================================
+;================================================================================
 
 ;Updates the frame counter and resets at 60 
 ;Parameters: None
@@ -118,15 +433,17 @@ ResetFrameCount:
     ret
 
 ;================================================================================
+;Sprite Subroutines
+;================================================================================
 
 ;Updates any sprite-OBJect. DE is our *pointer, and HL is used for
 ;   updating the properties of the sprite
 ;Parameters: DE = sprite.sprNum
 ;Affects: DE, A, BC
 MultiUpdateSATBuff:
-    ;==============================================
-    ;Update Sprite X, Y and CC
-    ;==============================================
+;================================================================================
+;Update Sprite X, Y and CC
+;================================================================================
     push hl                     ;Preserving HL
     ;Determine Sprite Number
         ld a, (sprUpdCnt)
@@ -268,21 +585,7 @@ MUSBLoop:
         dec de                      ;ld de, OBJ.hw
         djnz MUSBWidthReset         ;If our Height != 0, then we keep drawing
 
-    ;==============================================
-    ;End Sprites
-    ;==============================================
 MUSBEndSprites:
-    ;Don't use any more sprites, and  Update spriteCount
-/*
-        ld bc, spriteCount
-        ld a, (sprUpdCnt)
-        ld (bc), a
-        ld l, a
-        inc bc
-        ld a, (bc)
-        ld h, a
-        ld (hl), $d0
-*/
     ;Reset our offsets
         xor a
         ld hl, sprYOff
@@ -296,40 +599,26 @@ MUSBEndSprites:
 
     ret
 
+
 ;================================================================================
 
+;Writes the sprite terminator after the last updated sprite
+;Parameters:
+;Affects: BC, A, HL
 EndSprites:
-    ;Don't use any more sprites
-        ld bc, spriteCount
-        ld a, (sprUpdCnt)
-        ld (bc), a
-        ld l, a
-        inc bc
-        ld a, (bc)
-        ld h, a
-        ld (hl), $d0
+;Don't use any more sprites
+    ld bc, spriteCount
+    ld a, (sprUpdCnt)
+    ld (bc), a
+    ld l, a
+    inc bc
+    ld a, (bc)
+    ld h, a
+    ld (hl), $d0                ;Sprite terminator
 
-        ret        
+    ret        
 
-/*
-;Updates the counter for the total number of sprite on screen at once, 
-;and updates the endSprite terminator value
-;Parameters: B = inc or dec (1 or 0)
-;Affects: A, B, HL
-UpdateSprCnt:
-    ld hl, spriteCount
-    ld a, (spriteCount)
-    djnz +
-    ;One sprite has been added
-    inc a
-    ld (hl), a
-    ret
-+:
-    ;One sprite has been removed
-    dec a
-    ld (hl), a
-    ret
-*/
+
 ;================================================================================
 
 ;Updates the Sprite Attribute table with the SAT Buffer
@@ -350,16 +639,14 @@ UpdateSAT:
     otir                                ;Write contents of HL to C with B bytes
     ret
 
-;================================================================================
 
-;===================================================
-;Background Functions
-;===================================================
+;================================================================================
+;Background Subroutines
+;================================================================================
 
 ;Writes text to the screen in the dialogue box area (bottom)
 ;Parameters: DE = Message
 ;Affects: A, BC, HL, DE
-
 TextToScreen:
     ;First, let's set the RAM address to the correct tile map
     ld b, 0                                 ;Reset counter
@@ -463,11 +750,11 @@ BGTileCollision:
     ld a, $00                   ;So we just say there is no collision and return
     ret
 */
+
+;================================================================================
+;Mathematics
 ;================================================================================
 
-;===================================================
-;Mathematics
-;===================================================
 ;An alteration on the division algorithm used by Sean Mclaughlin in
 ;   Learn TI-83 Plus Assembly In 28 Days
 ;Divides one 8 bit number by another 8 bit number
@@ -491,6 +778,7 @@ Div8Sub:
     inc l               ;Add to our quotient
     djnz Div8Loop
     ret
+
 
 ;================================================================================
 
@@ -516,14 +804,15 @@ Mult8Add:
     djnz Mult8Loop          ;If we have gone through the 8 bits,
     ret                     ;Then we exit
 
+
 ;================================================================================
 /*
 ;-----> Generate a random number
-; output a=answer 0<=a<=255
-; all registers are preserved except: af
+;Output A = Answer 0 <= A <= 255
+;All registers are preserved except: af
 ;From WIKITI, based off the pseudorandom number generator featured 
 ;in Ion by Joe Wingbermuehle
-random:
+RandomNumberGenerator:
         push    hl
         push    de
         ld      hl,(randSeed)
@@ -541,6 +830,7 @@ random:
 ;===================================================
 ;Debugging
 ;===================================================
+
 ;This sets the sprite color palette to be grayscale
 ;Parameters: None
 ;Affects: None

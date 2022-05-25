@@ -150,7 +150,78 @@
     x5          db 
     cc5         db
     sprSize5    db
+;------------------------------
+;Hundreds digit BOTTOM
+    sprNum6     db
+    hw6         db
+    y6          db
+    x6          db 
+    cc6         db
+    sprSize6    db
+
+;Tens digit BOTTOM
+    sprNum7     db
+    hw7         db
+    y7          db
+    x7          db 
+    cc7         db
+    sprSize7    db
+;Ones digit BOTTOM
+    sprNum8     db
+    hw8         db
+    y8          db
+    x8          db 
+    cc8         db
+    sprSize8    db
+
+;MOVES
+;Tens digit BOTTOM
+    sprNum9     db
+    hw9         db
+    y9          db
+    x9          db 
+    cc9         db
+    sprSize9    db
+;Ones Digit BOTTOM
+    sprNumA     db
+    hwA         db
+    yA          db
+    xA          db 
+    ccA         db
+    sprSizeA    db
 
 .endst
 
+;==============================================================
+; Current Palette structure
+;==============================================================
+.struct paletteStruct
+    color0      db
+    color1      db
+    color2      db
+    color3      db
+    color4      db
+    color5      db
+    color6      db
+    color7      db
+    color8      db
+    color9      db
+    colorA      db
+    colorB      db
+    colorC      db
+    colorD      db
+    colorE      db
+    colorF      db
+.endst
 
+;==============================================================
+; SFS Shimmer
+;==============================================================
+.struct shimmerStruct
+    sprNum      db      ;The draw-number of the sprite      
+    hw          db      ;The hight and width of the entire OBJ
+    y           db      ;The Y coord of the OBJ
+    x           db      ;The X coord of the OBJ
+    cc          db      ;The first character code for the OBJ 
+    sprSize     db      ;The total area of the OBJ
+.endst

@@ -131,6 +131,9 @@ ResetPuzzle:
     ld hl, player.moveBuffer
     ld (hl), $10
 
+    halt
+    call UpdateSAT
+
     ret
 
 

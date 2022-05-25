@@ -5,11 +5,14 @@ TrianglePuzzle:
     ld hl, sceneComplete
     ld (hl), $00
 
+    inc hl                                  ;ld hl, sceneID
+    ld (hl), $02
+
 ;==============================================================
 ; Memory (Structures, Variables & Constants) 
 ;==============================================================
 
-.enum postBoiler export
+.enum postPal export
     player instanceof selector
     menu instanceof menuStruct
     strips instanceof strip     18
@@ -43,25 +46,30 @@ TrianglePuzzle:
 
     call ClearVRAM
 
+    call ClearSATBuff
+
+
 ;==============================================================
 ; Load Palette
 ;==============================================================
 
-;Load Background Palette
-    ld hl, $c000 | CRAMWrite
-    call SetVDPAddress
-    ;Next we send the BG palette data
-    ld hl, TrianglePuzzle_bgPal
-    ld bc, TrianglePuzzle_bgPalEnd-TrianglePuzzle_bgPal
-    call CopyToVDP
+;Write current BG palette to currentPalette struct
+    ld hl, currentBGPal.color0
+    ld de, FadedPalette
+    ld b, $10
+    call PalBufferWrite
 
-;Load Sprite Palette
-    ld hl, $c010 | CRAMWrite
-    call SetVDPAddress
-    ; Next we send the VDP the palette data
-    ld hl, TrianglePuzzle_sprPal
-    ld bc, TrianglePuzzle_sprPalEnd-TrianglePuzzle_sprPal
-    call CopyToVDP
+;Write current SPR palette to currentPalette struct
+    ld hl, currentSPRPal.color0
+    ld de, FadedPalette
+    ld b, $10
+    call PalBufferWrite
+
+;Shares the same palette as the title screen, and it won't be wiped
+
+;Actually update the palettes in VRAM
+    call LoadBackgroundPalette
+    call LoadSpritePalette
 
 ;==============================================================
 ; Load BG tiles 
@@ -125,11 +133,10 @@ TrianglePuzzle:
 ; Load Sprite tiles 
 ;==============================================================
     
-    ;Now we want to write the character data. For now, we will just
-    ;   keep all the frames in VRAM since there's so few
+;Now we want to write the character data. For now, we will just
+;keep all the frames in VRAM since there's so few
     ld hl, $2000 | VRAMWrite
     call SetVDPAddress
-    ; Then we send the VDP our tile data
 ;Left Facing Colored Strips
     ld hl, RedLeft
     ld de, redLeftAdr | VRAMWrite
@@ -189,6 +196,13 @@ TrianglePuzzle:
     ld bc, FontTilesEnd-FontTiles
     call CopyToVDP
 
+;Tall Numbers
+    ld hl, $3000 | VRAMWrite
+    call SetVDPAddress
+    ld hl, TallNumbers
+    ld de, $3000 | VRAMWrite
+    call Decompress
+
 
 ;==============================================================
 ; Intialize our Variables
@@ -240,28 +254,20 @@ TrianglePuzzle:
     call InitStatusBar
 
 ;==============================================================
-; Set HBlank for every 24th Scanline
+; Set Registers for HBlank
 ;==============================================================
-    ld a, $FF                               ;24 = $18, but it's OFF now, $0C = 12
+    ld a, $FF                               ;$FF = no HBlank
     ld c, $8A
+    call UpdateVDPRegister
+
+;Unblank Left Column
+    ld a, %00010100
+    ld c, $80
     call UpdateVDPRegister
 
 ;==============================================================
 ; Turn on screen
 ;==============================================================
-
- ;(Maxim's explanation is too good not to use)
-    ld a, %01100000
-;           ||||||`- Zoomed sprites -> 16x16 pixels
-;           |||||`-- Not doubled sprites -> 1 tile per sprite, 8x8
-;           ||||`--- Mega Drive mode 5 enable
-;           |||`---- 30 row/240 line mode
-;           ||`----- 28 row/224 line mode
-;           |`------ VBlank interrupts
-;            `------- Enable display    
-    ld c, $81
-    call UpdateVDPRegister
-
 ;Draw the selector first since it has to be the top-most sprite
     ld de, player.sprNum
     call MultiUpdateSATBuff
@@ -278,16 +284,39 @@ TrianglePuzzle:
 ;Must manually call due to not wanting to update all strips every frame
     call EndSprites
 
+;Write to VRAM before display turns on
+    call UpdateSAT
+
+
+ ;(Maxim's explanation is too good not to use)
+    ld a, %01100000
+;           ||||||`- Zoomed sprites -> 16x16 pixels
+;           |||||`-- Not doubled sprites -> 1 tile per sprite, 8x8
+;           ||||`--- Mega Drive mode 5 enable
+;           |||`---- 30 row/240 line mode
+;           ||`----- 28 row/224 line mode
+;           |`------ VBlank interrupts
+;            `------- Enable display    
+    ld c, $81
+    call UpdateVDPRegister
+
 
 ;========================================================
 ; Game Logic
 ;========================================================
+
+    call FadeIn
 
 TrianglePuzzleMainLoop:
     halt
     jp CheckVBlank
 
 PostVBlank:
+
+;Check if we are at pause screen
+    ld a, (sceneID)
+    cp $FF
+    jp z, AtSolutionScreen
 
     call UpdateSAT
 
@@ -302,6 +331,7 @@ PostVBlank:
     call CheckPlayerInput
 
     jp TrianglePuzzleMainLoop               ;Let's keep it going
+
 
 ;========================================================
 ; Triangle Puzzle Data
@@ -350,6 +380,11 @@ TrianglePuzzleTiles:
 TrianglePuzzleTilesEnd:
 
 
+AnswerTiles:
+    .include "assets\\tiles\\backgrounds\\answers_tiles.inc"
+AnswerTilesEnd:
+
+
 SelectedNodeTiles:
     .incbin "assets\\tiles\\backgrounds\\selectNode_tiles.pscompr"
 
@@ -372,6 +407,11 @@ YouWinTilesEnd:
 TrianglePuzzleMap:
     .include "assets\\maps\\trianglePuzzle_map.inc"
 TrianglePuzzleMapEnd:
+
+
+AnswerMap:
+    .include "assets\\maps\\answers_map.inc"
+AnswerMapEnd:
 
 
 YouWinMap:
@@ -447,6 +487,11 @@ MenuBL:
     .incbin "assets\\tiles\\sprites\\menuSelector\\BL.pscompr"
 MenuBR:
     .incbin "assets\\tiles\\sprites\\menuSelector\\BR.pscompr"
+
+;-----------------------
+
+TallNumbers:
+    .incbin "assets\\tiles\\sprites\\tallNumbers\\tallNumbers.pscompr"
 
 
     

@@ -18,13 +18,11 @@ CheckHBlankNum:
 ;On the first HBlank, we will swap the sprites back to 8x8
 
     ld a, (INTNumber)
-    ld c, $02
-    cp c
+    cp $02
     call z, SetSmallSprites
 ;Set sprites to 8x16 so that when we draw the score and moves, we use tall numbers
     ld a, (INTNumber)
-    ld c, $0E
-    cp c
+    cp $0E
     call z, SetTallSprites   
 
     

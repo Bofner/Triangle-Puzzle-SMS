@@ -8,6 +8,8 @@ Most importantly, it runs on real Sega Master System Hardware:
 
 ![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/realHardware.gif)
 
+The rest of these GIFs were recorded using a Sega Genesis Model II, so yes, it will also run on a Genesis/Megadrive!
+
 When three nodes are selected that encapsulate 2 edges, those edges colors can be swapped:
 
 ![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/swap.gif)

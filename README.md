@@ -30,7 +30,7 @@ And the puzzle can be solved!
 
 ![](https://github.com/Bofner/Triangle-Puzzle-SMS/blob/main/images/youWin.gif)
 
-There's still some more things to be fixed cosmetically, but functionally, the game works just as it was assigned in class, but for the Sega Master System!
+Triangle Puzzle works just as it was assigned in class, but for the Sega Master System and with some added features such as a Developer splash screen, a title screen (with parallax scrolling!) and the pause button will show the player the solution they are working towards! There's even a (not so well) hidden way to change the palette of the edges!
 
 ## Updates:
 

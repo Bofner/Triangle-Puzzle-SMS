@@ -32,6 +32,10 @@ There's still some more things to be fixed cosmetically, but functionally, the g
 
 ## Updates:
 
+#### Update: 5/25/2022
+
+Fixed an issue where the palette wasn't updated on the pause screen if you swapped palettes on the title screen.
+
 #### Update: 5/19/2022
 
 Added a Dev studio splash screen. Added a title screen. Added a way to restart the game after winning. Made it so that the Pause button shows the solution you are working

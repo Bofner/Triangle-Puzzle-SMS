@@ -1,6 +1,6 @@
 # Triangle Puzzle SMS
 
-The first (non-text based) video game I ever created to completion was a Java game called Triangle Puzzle that was assigned as the first project of a software engineering course that I took in graduate school (source code included in this repository!). It's a simple game, just match the edges of the triangles to the solution to win, but it taught me a lot about object oriented programming, and how to organize both my ideas, and my code. Now that I'm starting my journey into a deep understanding of Z80 assembly and the Sega Master System, I thought, what better game to start with than good old Triangle Puzzle!
+The first (non-text based) video game I ever created to completion was a Java game called Triangle Puzzle that was assigned as the first project of a software engineering course that I took in graduate school (source code can be found in its own repository on this GitHub account). It's a simple game, just match the edges of the triangles to the solution to win, but it taught me a lot about object oriented programming, and how to organize both my ideas, and my code. Now that I'm starting my journey into a deep understanding of Z80 assembly and the Sega Master System, I thought, what better game to start with than good old Triangle Puzzle!
 
 Here's a run-down of what I've accomplished
 
